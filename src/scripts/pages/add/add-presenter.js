@@ -1,8 +1,9 @@
 export default class AddPresenter {
-  constructor({ view, api, session }) {
+  constructor({ view, api, session, database }) {
     this.view = view;
     this.api = api;
     this.session = session;
+    this.database = database;
   }
   async submit(data) {
     const token = this.session.getToken();
@@ -30,9 +31,20 @@ export default class AddPresenter {
     }
     try {
       this.view.setLoading(true);
+      if (!navigator.onLine) {
+        await this.database.addPendingStory(data);
+        this.view.onQueued();
+        return;
+      }
+
       await this.api.addStory(token, data);
       this.view.onSuccess();
     } catch (error) {
+      if (error instanceof TypeError) {
+        await this.database.addPendingStory(data);
+        this.view.onQueued();
+        return;
+      }
       this.view.showError(error.message);
     } finally {
       this.view.setLoading(false);

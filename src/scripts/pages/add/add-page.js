@@ -1,4 +1,5 @@
 import { StoryApi, SessionModel } from "../../data/api";
+import Database from "../../data/database";
 import { createMap, L } from "../../utils/map";
 import { showToast } from "../../utils";
 import AddPresenter from "./add-presenter";
@@ -21,6 +22,7 @@ export default class AddPage {
       view: this,
       api: StoryApi,
       session: SessionModel,
+      database: Database,
     });
     this.map = createMap("location-map", { zoom: 5 });
     this.map.on("click", ({ latlng }) =>
@@ -162,6 +164,12 @@ export default class AddPage {
   onSuccess() {
     this.stopCamera();
     showToast("Cerita berhasil dibagikan.");
+    location.hash = "#/";
+  }
+
+  onQueued() {
+    this.stopCamera();
+    showToast("Cerita disimpan offline dan akan disinkronkan saat online.");
     location.hash = "#/";
   }
 

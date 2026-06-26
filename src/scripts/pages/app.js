@@ -8,6 +8,11 @@ import {
   subscribePushNotification,
   unsubscribePushNotification,
 } from "../utils/notification-helper";
+import {
+  getPendingStoriesCount,
+  setupOfflineSync,
+  syncPendingStories,
+} from "../utils/sync-helper";
 
 class App {
   constructor({ navigationDrawer, drawerButton, content }) {
@@ -15,6 +20,7 @@ class App {
     this.drawerButton = drawerButton;
     this.navigationDrawer = navigationDrawer;
     this.setupDrawer();
+    setupOfflineSync(() => this.updateNavigation());
     this.updateNavigation();
   }
   setupDrawer() {
@@ -34,6 +40,7 @@ class App {
         location.hash = "#/login";
       }
       if (event.target.closest("#push-toggle")) this.togglePushNotification();
+      if (event.target.closest("#sync-pending")) this.syncOfflineStories();
       if (event.target.closest(".navigation-drawer a")) this.closeDrawer();
     });
   }
@@ -44,8 +51,13 @@ class App {
   async updateNavigation() {
     const loggedIn = Boolean(SessionModel.getToken());
     const user = SessionModel.getUser();
+    const pendingCount = loggedIn ? await getPendingStoriesCount() : 0;
+    const syncButton =
+      pendingCount > 0
+        ? `<li><button id="sync-pending" class="nav-button neutral" type="button">Sync offline (${pendingCount})</button></li>`
+        : "";
     document.querySelector("#nav-list").innerHTML = loggedIn
-      ? `<li><a href="#/">Beranda</a></li><li><a href="#/add">Tambah cerita</a></li><li><a href="#/saved">Tersimpan</a></li><li><a href="#/about">Tentang</a></li><li><span class="user-label">${escapeHtml(user?.name || "Pengguna")}</span></li><li><button id="push-toggle" class="nav-button neutral" type="button">Notifikasi</button></li><li><button id="logout-button" class="nav-button" type="button">Keluar</button></li>`
+      ? `<li><a href="#/">Beranda</a></li><li><a href="#/add">Tambah cerita</a></li><li><a href="#/saved">Tersimpan</a></li><li><a href="#/about">Tentang</a></li>${syncButton}<li><span class="user-label">${escapeHtml(user?.name || "Pengguna")}</span></li><li><button id="push-toggle" class="nav-button neutral" type="button">Notifikasi</button></li><li><button id="logout-button" class="nav-button" type="button">Keluar</button></li>`
       : `<li><a href="#/about">Tentang</a></li><li><a href="#/login">Masuk</a></li><li><a class="nav-register" href="#/register">Daftar</a></li>`;
 
     if (loggedIn) await this.updatePushToggle();
@@ -78,6 +90,16 @@ class App {
     } finally {
       button.disabled = false;
       await this.updatePushToggle();
+    }
+  }
+  async syncOfflineStories() {
+    const button = document.querySelector("#sync-pending");
+    try {
+      button.disabled = true;
+      button.textContent = "Menyinkronkan...";
+      await syncPendingStories({ notify: true });
+    } finally {
+      await this.updateNavigation();
     }
   }
   async renderPage() {

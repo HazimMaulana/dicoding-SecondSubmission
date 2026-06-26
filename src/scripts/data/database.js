@@ -1,7 +1,8 @@
 const DATABASE_NAME = "kisah-nusantara";
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const SAVED_STORE = "saved-stories";
 const CACHE_STORE = "cached-stories";
+const PENDING_STORE = "pending-stories";
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -22,6 +23,13 @@ function openDatabase() {
 
       if (!database.objectStoreNames.contains(CACHE_STORE)) {
         database.createObjectStore(CACHE_STORE, { keyPath: "id" });
+      }
+
+      if (!database.objectStoreNames.contains(PENDING_STORE)) {
+        const pendingStore = database.createObjectStore(PENDING_STORE, {
+          keyPath: "id",
+        });
+        pendingStore.createIndex("createdAt", "createdAt");
       }
     };
   });
@@ -74,6 +82,34 @@ const Database = {
 
   async getCachedStories() {
     return withStore(CACHE_STORE, "readonly", (store) => store.getAll());
+  },
+
+  async addPendingStory(story) {
+    const pendingStory = {
+      id: `pending-${Date.now()}-${crypto.randomUUID()}`,
+      description: story.description.trim(),
+      photo: story.photo,
+      lat: story.lat,
+      lon: story.lon,
+      createdAt: new Date().toISOString(),
+    };
+
+    await withStore(PENDING_STORE, "readwrite", (store) =>
+      store.put(pendingStory),
+    );
+    return pendingStory;
+  },
+
+  async getPendingStories() {
+    return withStore(PENDING_STORE, "readonly", (store) => store.getAll());
+  },
+
+  async deletePendingStory(id) {
+    return withStore(PENDING_STORE, "readwrite", (store) => store.delete(id));
+  },
+
+  async countPendingStories() {
+    return withStore(PENDING_STORE, "readonly", (store) => store.count());
   },
 };
 

@@ -1,2 +1,2 @@
-APP_URL=https://USERNAME.github.io/NAMA_REPO/
+APP_URL=https://hazimmaulana.github.io/dicoding-SecondSubmission/
 MAP_SERVICE_API_KEY=Tidak diperlukan (OpenStreetMap dan CARTO tanpa API key)
